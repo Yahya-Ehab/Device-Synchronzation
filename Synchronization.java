@@ -24,6 +24,9 @@ class Semaphore {
         value++;
         notify();
     }
+     public synchronized int availablePermits() {
+        return value;
+    }
 }
 
 public class Network {
