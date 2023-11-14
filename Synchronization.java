@@ -28,6 +28,23 @@ class Semaphore {
         return value;
     }
 }
+ class Router{
+    private List<String> activeConnections = new ArrayList<>();
+    private Semaphore semaphore;
+   Router(int max_connection){
+        semaphore=new Semaphore(max_connection);
+  }
+  public void occupyConnection(String deviceName) throws InterruptedException {
+       semaphore.acquire();
+       activeConnections.add(deviceName);
+      System.out.println(deviceName + "  Occupied.");
+  }
+    public void releaseConnection(String deviceName){
+        activeConnections.remove(deviceName);
+        semaphore.release();
+        System.out.println(deviceName + " released the connection.");
+    }
+ }
 
 public class Network {
     public static void main(String[] args) {
