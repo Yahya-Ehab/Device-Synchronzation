@@ -27,6 +27,12 @@ class Device implements Runnable {
     public void run() {
         try {
             System.out.println("- (" + name + ")(" + type + ") arrived");
+
+            while (router.isConnectionOccupied(name)) {
+                System.out.println("- (" + name + ")(" + type + ") waiting for connection");
+                Thread.sleep(1000);
+            }
+
             router.occupyConnection(name);
 
             System.out.println("- Connection " + connectionNumber + ": " + name + " login");
@@ -83,6 +89,19 @@ class Semaphore {
         activeConnections.remove(deviceName);
         semaphore.release();
         System.out.println(deviceName + " released the connection.");
+    }
+    public boolean isConnectionOccupied(String deviceName){
+        return activeConnections.contains(deviceName);
+    }
+
+    public boolean isAnyConnectionOccupied(){
+        return activeConnections.size() > 0;
+    }
+    public int getActiveConnectionsCount(){
+        return activeConnections.size();
+    }
+    public int getMaxConnections(){
+        return semaphore.availablePermits();
     }
  }
 
