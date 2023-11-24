@@ -28,7 +28,7 @@ class Device implements Runnable {
         try {
             System.out.println("- (" + name + ")(" + type + ") arrived");
 
-            while (router.isConnectionOccupied(name)) {
+            while (router.isConnectionOccupied(name)|| (!isConnected && router.getActiveConnectionsCount() >= 2)) {
                 System.out.println("- (" + name + ")(" + type + ") waiting for connection");
                 Thread.sleep(1000);
             }
