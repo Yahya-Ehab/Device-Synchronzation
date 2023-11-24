@@ -1,145 +1,145 @@
+
+
 import java.util.ArrayList;
-import java.util.List;
-import java.util.Scanner;
+import java.util.LinkedList;
+import java.util.Queue;
 
-class Device implements Runnable {
-    private String name;
-    private String type;
-    private Router router;
-    private int connectionNumber;
+class Device extends Thread {
+    String name;
+    String type;
+    int connectionNumber;
+    Router router;
 
-    public Device(String name, String type, Router router, int connectionNumber) {
+    Device(String name, String type, Router router) {
         this.name = name;
         this.type = type;
         this.router = router;
-        this.connectionNumber = connectionNumber;
+    }
+
+    public void setConnectionNumber(int number) {
+        this.connectionNumber = number;
     }
 
     public int getConnectionNumber() {
-        return connectionNumber;
-    }
-
-    public String getName() {
-        return name;
+        return this.connectionNumber;
     }
 
     @Override
     public void run() {
         try {
-            System.out.println("- (" + name + ")(" + type + ") arrived");
-
-            while (router.isConnectionOccupied(name)) {
-                System.out.println("- (" + name + ")(" + type + ") waiting for connection");
-                Thread.sleep(1000);
-            }
-
-            router.occupyConnection(name);
-
-            System.out.println("- Connection " + connectionNumber + ": " + name + " login");
-            // Simulate online activity
+            router.connect(this);
             Thread.sleep((long) (Math.random() * 1000));
-            System.out.println("- Connection " + connectionNumber + ": " + name + " performs online activity");
-
-            System.out.println("- Connection " + connectionNumber + ": " + name + " Logged out");
-            router.releaseConnection(name);
+            System.out.println("Connection " + connectionNumber + ": " + name + " login"); 
+            
+            System.out.println("Connection " + connectionNumber + ": " + name + " Performs online activity");
+            Thread.sleep((long) (Math.random() * 1000));
+            router.release(this);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
     }
+
+   
 }
-
 class Semaphore {
-    protected int value = 0;
+    int maxConnections;
+    int connectedNum;
+    Queue<Integer> Connections = new LinkedList<>();
 
-    protected Semaphore() {
-        value = 0;
+    Semaphore(int max) {
+        this.maxConnections = max;
+        connectedNum = 0;
+        for(int i=1; i<=maxConnections; i++)
+        {
+            Connections.add(i);
+        }
     }
 
-    protected Semaphore(int initial) {
-        value = initial;
+    public synchronized boolean isPermit() {
+        return connectedNum < maxConnections;
     }
 
-    public synchronized void acquire() throws InterruptedException {
-        while (value == 0) {
+    public synchronized void occupyConnection(Device device) throws InterruptedException {
+        if(isPermit())
+        {
+            System.out.println("(" + device.name + ") " + "(" + device.type + ")" + " arrived");
+        }
+        else
+        {
+            System.out.println("(" + device.name + ") " + "(" + device.type + ")" + " arrived and waiting");
+        }
+
+        while (!isPermit()) 
+        {
+
             wait();
         }
-        value--;
+        connectedNum++;
+        int connectionNum = Connections.poll();
+        device.setConnectionNumber(connectionNum);
+        System.out.println("Connection " + device.getConnectionNumber() + ": " + device.name + " Occupied");
     }
 
-    public synchronized void release() {
-        value++;
+    public synchronized void releaseConnection(Device device) {
+        connectedNum--;
+        System.out.println("Connection " + device.getConnectionNumber() + ": " + device.name + " logged out");
+        Connections.add(device.getConnectionNumber());
         notify();
     }
-     public synchronized int availablePermits() {
-        return value;
-    }
 }
- class Router{
-    private List<String> activeConnections = new ArrayList<>();
-    private Semaphore semaphore;
-   Router(int max_connection){
-        semaphore=new Semaphore(max_connection);
-  }
-  public void occupyConnection(String deviceName) throws InterruptedException {
-       semaphore.acquire();
-       activeConnections.add(deviceName);
-      System.out.println(deviceName + "  Occupied.");
-  }
-    public void releaseConnection(String deviceName){
-        activeConnections.remove(deviceName);
-        semaphore.release();
-        System.out.println(deviceName + " released the connection.");
-    }
-    public boolean isConnectionOccupied(String deviceName){
-        return activeConnections.contains(deviceName);
+class Router {
+    Semaphore semaphore;
+
+    Router(int N) {
+        semaphore = new Semaphore(N);
     }
 
-    public boolean isAnyConnectionOccupied(){
-        return activeConnections.size() > 0;
+    public void connect(Device device) throws InterruptedException {
+        semaphore.occupyConnection(device);
     }
-    public int getActiveConnectionsCount(){
-        return activeConnections.size();
+
+    public void release(Device device) {
+        semaphore.releaseConnection(device);
     }
-    public int getMaxConnections(){
-        return semaphore.availablePermits();
-    }
- }
+}
+
 
 public class Network {
     public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
+        // Scanner scanner = new Scanner(System.in);
 
-       
-        System.out.print("Enter the max number of connections (N): ");
-        int maxConnections = scanner.nextInt();
+        // System.out.print("What is the number of WI-FI Connections? ");
+        int maxConnections = 2;//scanner.nextInt();
 
-     
-        System.out.print("Enter the total number of devices (TC): ");
-        int totalDevices = scanner.nextInt();
+        // System.out.print("What is the number of devices Clients want to connect? ");
+        int totalDevices = 4;//scanner.nextInt();
 
         Router router = new Router(maxConnections);
 
-       
-
         Device[] devices = new Device[totalDevices];
         // for (int i = 0; i < totalDevices; i++) {
-        //     System.out.print("Enter the name of device " + (i + 1) + ": ");
-        //     String deviceName = scanner.next();
-
-        //     System.out.print("Enter the type of device " + (i + 1) + ": ");
-        //     String deviceType = scanner.next();
-        //     devices[i] = new Device(deviceName, deviceType, router, i+1);
+        //     System.out.print("Enter device name and type (e.g., C1 mobile): ");
+        //     String name = scanner.next();
+        //     String type = scanner.next();
+        //     devices[i] = new Device(name, type, router);
         // }
-        devices[0] = new Device("C1", "mobile", router, 1);
-        devices[1] = new Device("C2", "tablet", router, 2);
-        devices[2] = new Device("C3", "pc", router, 3);
-        devices[3] = new Device("C4", "pc", router, 4);
+        devices[0] = new Device("c1", "pc", router);
+        devices[1] = new Device("c2", "", router);
+        devices[2] = new Device("c3", "pc", router);
+        devices[3] = new Device("c4", "pc", router);
+
         Thread[] threads = new Thread[totalDevices];
         for (int i = 0; i < totalDevices; i++) {
             threads[i] = new Thread(devices[i]);
             threads[i].start();
         }
 
-        scanner.close();
+        // scanner.close();
     }
 }
+
+
+
+
+
+
